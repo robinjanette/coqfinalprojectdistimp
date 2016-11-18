@@ -4,6 +4,9 @@ Require Import Coq.Arith.Arith.
 Require Import Coq.Arith.EqNat.
 Require Import Maps.
 Require Import Imp.
+Require Import Smallstep.
+
+Module DistIMP.
 
 Inductive com : Type :=
   | CSkip : com
@@ -25,7 +28,6 @@ Notation "'WHILE' b 'DO' c 'END'" :=
   (CWhile b c) (at level 80, right associativity).
 Notation "'IFB' b 'THEN' c1 'ELSE' c2 'FI'" :=
   (CIf b c1 c2) (at level 80, right associativity).
-
 
 Reserved Notation " t '/' st '==>' t' '/' st' "
                   (at level 40, st at level 39, t' at level 39).
@@ -55,5 +57,5 @@ Inductive cstep : (com * state) -> (com * state) -> Prop :=
 
   where " t '/' st '==>' t' '/' st' " := (cstep (t,st) (t',st')).
 
-
+End DistIMP.
 
