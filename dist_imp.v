@@ -13,16 +13,19 @@ Module DistIMP.
 Definition empty_state : state :=
   t_empty 0.*)
 
-Definition sb := list (nat * id).
+Definition sb := list (aexp * id).
 
-Definition rb := list nat.
+Definition rb := list aexp.
+
+Definition st := total_map nat.
 
 Inductive State : Type :=
-| state : sb  -> rb -> total_map nat -> State.
+| state : sb  -> rb -> st -> State.
 
 (*Definition empty_state : State := state [] [] (t_empty 0).*)
 
 Inductive aexp : Type :=
+  | AId : id -> aexp
   | ANum : nat -> aexp
   | APlus : aexp -> aexp -> aexp
   | AMinus : aexp -> aexp -> aexp
@@ -58,7 +61,7 @@ Notation "'IFB' b 'THEN' c1 'ELSE' c2 'FI'" :=
   (CIf b c1 c2) (at level 80, right associativity).
 Notation "'SEND' a 'TO' id" :=
   (CSend id a) (at level  80, right associativity).
-Notation "'RECIEVE'"  :=
+Notation "'RECEIVE'"  :=
   (CRecieve) (at level 80, right associativity).
 
 Check state.
@@ -66,16 +69,11 @@ Check state.
 Inductive aval : aexp -> Prop :=
   av_num : forall n, aval (ANum n).
 
-(** We are not actually going to bother to define boolean
-    values, since they aren't needed in the definition of [==>b]
-    below (why?), though they might be if our language were a bit
-    larger (why?). *)
-
 Reserved Notation " t '/' st '==>a' t' " (at level 40, st at level 39).
 
 Inductive astep : State -> aexp -> aexp -> Prop :=
-  | AS_Id : forall st i,
-      AId i / st ==>a ANum (st i)
+  | AS_Id : forall sb rb st i,
+      AId i / state sb rb st ==>a ANum (st i)
   | AS_Plus : forall st n1 n2,
       APlus (ANum n1) (ANum n2) / st ==>a ANum (n1 + n2)
   | AS_Plus1 : forall st a1 a1' a2,
@@ -151,38 +149,46 @@ Inductive astep : State -> aexp -> aexp -> Prop :=
 
   where " t '/' st '==>b' t' " := (bstep st t t').
 
-
-Reserved Notation " t '/' st '==>' t' '/' st' "
-                  (at level 40, st at level 39, t' at level 39).
-
-Check CSkip.
-
 Inductive cstep : (com * State) -> (com * State) -> Prop :=
-  (*| CS_AssStep : forall st i a a',
-      a / st ==>a a' ->
-      (i ::= a) / st ==> (i ::= a') / st*)
-  (*| CS_Ass : forall sb rb (st : State) i n,
-      (i ::= (ANum n)) / st ==> SKIP / state sb rb (t_update st i n)*)
+  | CS_AssStep : forall (sb1 : sb) (rb1 : rb) (st1 : st) (i : id) (a a' : aexp),
+      a / state sb1 rb1 st1 ==>a a' ->
+      cstep (i ::= a, state sb1 rb1 st1) (i ::= a', state sb1 rb1 st1)
+  | CS_Ass : forall (sb1 : sb) (rb1 : rb) (st1 : st) (i : id) (n : nat),
+      cstep (i ::= (ANum n), state sb1 rb1 st1) 
+      (SKIP, state sb1 rb1 (t_update st1 i n))
   | CS_SeqStep : forall (st: State) (c1 c1': com) (st' : State) (c2 : com),
-      c1 / st ==> c1' / st' ->
-      (c1 ;; c2) / st ==> (c1' ;; c2) / st'
-  | CS_SeqFinish : forall st c2,
-      (SKIP ;; c2) / st ==> c2 / st
-  | CS_IfTrue : forall st c1 c2,
-      IFB BTrue THEN c1 ELSE c2 FI / st ==> c1 / st
-  | CS_IfFalse : forall st c1 c2,
-      IFB BFalse THEN c1 ELSE c2 FI / st ==> c2 / st
-  | CS_IfStep : forall st b b' c1 c2,
-      b / st ==>b b' ->
-          IFB b THEN c1 ELSE c2 FI / st 
-      ==> (IFB b' THEN c1 ELSE c2 FI) / st
-  | CS_While : forall st b c1,
-          (WHILE b DO c1 END) / st
-      ==> (IFB b THEN (c1;; (WHILE b DO c1 END)) ELSE SKIP FI) / st.
-  (*| CS_Send : 
-      (SEND a TO id) / st -*)
-
-  where " t '/' st '==>' t' '/' st' " := (cstep (t,st) (t',st')).
+      cstep (c1, st) (c1', st') ->
+      cstep (c1 ;; c2, st) (c1' ;; c2, st')
+  | CS_SeqFinish : forall (sb1 : sb) (rb1 : rb) (st1 : st) (c2 : com),
+      cstep (SKIP ;; c2, state sb1 rb1 st1) (c2, state sb1 rb1 st1)
+  | CS_IfTrue : forall (sb1 : sb) (rb1 : rb) (st1 : st) (c1 c2 : com),
+      cstep (IFB BTrue THEN c1 ELSE c2 FI, state sb1 rb1 st1)
+      (c1, state sb1 rb1 st1)
+  | CS_IfFalse : forall (sb1 : sb) (rb1 : rb) (st1 : st) (c1 c2 : com),
+      cstep (IFB BFalse THEN c1 ELSE c2 FI, state sb1 rb1 st1) 
+      (c2, state sb1 rb1 st1)
+  | CS_IfStep : forall (sb1 : sb) (rb1 : rb) (st1 : st)
+                (b b' : bexp) (c1 c2: com),
+      b / state sb1 rb1 st1 ==>b b' ->
+      cstep (IFB b THEN c1 ELSE c2 FI, state sb1 rb1 st1) 
+      ((IFB b' THEN c1 ELSE c2 FI), state sb1 rb1 st1)
+  | CS_While : forall (sb1 : sb) (rb1 : rb) (st1 : st) (b : bexp) (c1 : com),
+      cstep (WHILE b DO c1 END, state sb1 rb1 st1)
+      ((IFB b THEN (c1;; (WHILE b DO c1 END)) ELSE SKIP FI), state sb1 rb1 st1)
+  | CS_Send1 : forall (sb1 : sb) (rb1 : rb)
+                      (st1 : st) (a a' : aexp) (x : id),
+      a / state sb1 rb1 st1 ==>a a' -> 
+      cstep (SEND a TO x, state sb1 rb1 st1) (SEND a' TO x, state sb1 rb1 st1)
+  (*| CS_Send2 : forall (sb : list (aexp * id)) (rb : list aexp)
+                      (st : total_map nat) (a : aexp) (x : id) (n : nat),
+      a = ANum n ->
+      cstep (SEND a TO x, state sb rb st) (SKIP, state (sb ++ [(a * x)]) rb st)*)
+  | CS_Rec1 : forall (sb1 : sb) (st1 : st),
+      cstep (RECEIVE, state sb1 nil st1) (SKIP ;; RECEIVE, state sb1 nil st1)
+  (*| CS_Rec2 : forall (sb1 : sb) (rb1 : rb) 
+                     (st1 : st) (a : aexp) (x : id),
+      cstep (RECEIVE, state sb1 (app [a] rb1) st1) 
+            (x ::= a, state sb1 rb1 (t_update st1 x a))*).
 
 End DistIMP.
 
