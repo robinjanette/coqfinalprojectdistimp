@@ -175,6 +175,7 @@ Inductive cstep : (com * State) -> (com * State) -> Prop :=
   | CS_While : forall (sb1 : sb) (rb1 : rb) (st1 : st) (b : bexp) (c1 : com),
       cstep (WHILE b DO c1 END, state sb1 rb1 st1)
       ((IFB b THEN (c1;; (WHILE b DO c1 END)) ELSE SKIP FI), state sb1 rb1 st1)
+
   | CS_Send1 : forall (sb1 : sb) (rb1 : rb)
                       (st1 : st) (a a' : aexp) (x : id),
       a / state sb1 rb1 st1 ==>a a' -> 
@@ -182,13 +183,13 @@ Inductive cstep : (com * State) -> (com * State) -> Prop :=
   (*| CS_Send2 : forall (sb : list (aexp * id)) (rb : list aexp)
                       (st : total_map nat) (a : aexp) (x : id) (n : nat),
       a = ANum n ->
-      cstep (SEND a TO x, state sb rb st) (SKIP, state (sb ++ [(a * x)]) rb st)*)
+      cstep (SEND a TO x, state sb rb st) (SKIP, state (sb ++ [(a, x)]) rb st)*)
   | CS_Rec1 : forall (sb1 : sb) (st1 : st),
       cstep (RECEIVE, state sb1 nil st1) (SKIP ;; RECEIVE, state sb1 nil st1)
   (*| CS_Rec2 : forall (sb1 : sb) (rb1 : rb) 
                      (st1 : st) (a : aexp) (x : id),
       cstep (RECEIVE, state sb1 (app [a] rb1) st1) 
-            (x ::= a, state sb1 rb1 (t_update st1 x a))*).
+            (x ::= a, state sb1 rb1 st1*).
 
 End DistIMP.
 
