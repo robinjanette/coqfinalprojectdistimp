@@ -3,26 +3,12 @@
 Require Import Coq.Arith.Arith.
 Require Import Coq.Arith.EqNat.
 Require Import Maps.
-Require Import Imp.
+(*Require Import Imp.*)
+Require Import Coq.Lists.List.
+ Import List Notations.
 (*Require Import Smallstep.*)
 
 Module DistIMP.
-
-(*Definition state := total_map nat.
-
-Definition empty_state : state :=
-  t_empty 0.*)
-
-Definition sb := list (aexp * id).
-
-Definition rb := list aexp.
-
-Definition st := total_map nat.
-
-Inductive State : Type :=
-| state : sb  -> rb -> st -> State.
-
-(*Definition empty_state : State := state [] [] (t_empty 0).*)
 
 Inductive aexp : Type :=
   | AId : id -> aexp
@@ -63,6 +49,22 @@ Notation "'SEND' a 'TO' id" :=
   (CSend id a) (at level  80, right associativity).
 Notation "'RECEIVE'"  :=
   (CRecieve) (at level 80, right associativity).
+
+(*Definition state := total_map nat.
+
+Definition empty_state : state :=
+  t_empty 0.*)
+
+Definition sb := list (aexp * id).
+
+Definition rb := list aexp.
+
+Definition st := total_map nat.
+
+Inductive State : Type :=
+| state : sb  -> rb -> st -> State.
+
+(*Definition empty_state : State := state [] [] (t_empty 0).*)
 
 Check state.
 
@@ -180,16 +182,17 @@ Inductive cstep : (com * State) -> (com * State) -> Prop :=
                       (st1 : st) (a a' : aexp) (x : id),
       a / state sb1 rb1 st1 ==>a a' -> 
       cstep (SEND a TO x, state sb1 rb1 st1) (SEND a' TO x, state sb1 rb1 st1)
-  (*| CS_Send2 : forall (sb : list (aexp * id)) (rb : list aexp)
-                      (st : total_map nat) (a : aexp) (x : id) (n : nat),
+  | CS_Send2 : forall (sb1 : sb) (rb1 : rb) (st1 : st) 
+                      (a : aexp) (x : id) (n : nat),
       a = ANum n ->
-      cstep (SEND a TO x, state sb rb st) (SKIP, state (sb ++ [(a, x)]) rb st)*)
+      cstep (SEND a TO x, state sb1 rb1 st1) 
+            (SKIP, state (app sb1 (cons (a, x) nil)) rb1 st1)
   | CS_Rec1 : forall (sb1 : sb) (st1 : st),
       cstep (RECEIVE, state sb1 nil st1) (SKIP ;; RECEIVE, state sb1 nil st1)
-  (*| CS_Rec2 : forall (sb1 : sb) (rb1 : rb) 
+  | CS_Rec2 : forall (sb1 : sb) (rb1 : rb) 
                      (st1 : st) (a : aexp) (x : id),
-      cstep (RECEIVE, state sb1 (app [a] rb1) st1) 
-            (x ::= a, state sb1 rb1 st1*).
+      cstep (RECEIVE, state sb1 (app (cons a nil) rb1) st1) 
+            (x ::= a, state sb1 rb1 st1).
 
 End DistIMP.
 
