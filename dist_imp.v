@@ -3,9 +3,9 @@
 Require Import Coq.Arith.Arith.
 Require Import Coq.Arith.EqNat.
 Require Import Maps.
-(*Require Import Imp.*)
+Require Import Imp.
 Require Import Coq.Lists.List.
- Import List Notations.
+Import List Notations.
 (*Require Import Smallstep.*)
 
 Module DistIMP.
@@ -64,7 +64,7 @@ Definition st := total_map nat.
 Inductive State : Type :=
 | state : sb  -> rb -> st -> State.
 
-(*Definition empty_state : State := state [] [] (t_empty 0).*)
+Definition empty_state : State := state nil nil (t_empty 0).
 
 Check state.
 
