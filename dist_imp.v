@@ -194,5 +194,30 @@ Inductive cstep : (com * State) -> (com * State) -> Prop :=
       cstep (RECEIVE, state sb1 (app (cons a nil) rb1) st1) 
             (x ::= a, state sb1 rb1 st1).
 
+Inductive imp : Type :=
+  | machine : id -> com -> State -> imp.
+
+Inductive dist_imp : imp -> imp -> Prop :=
+  | imp_step_1 : forall (c1 c1' c2 : com) (st1 st1' st2 : State) (x y : id),
+      dist_imp (machine x c1 st1) (machine y c2 st2) -> 
+      cstep (c1, st1) (c1', st1') ->
+      dist_imp (machine x c1' st1') (machine y c2 st2)
+  | imp_step_2 : forall (c1 c2' c2 : com) (st1 st2' st2 : State) (x y : id),
+      dist_imp (machine x c1 st1) (machine y c2 st2) -> 
+      cstep (c2, st2) (c2', st2') ->
+      dist_imp (machine x c1 st1) (machine y c2' st2')
+  | send_y : forall (c1 c2 : com) (sb1 sb2 : sb) (rb1 rb2 : rb) (st1 st2 : st)
+                    (a : aexp) (x y : id),
+      dist_imp (machine x c1 (state (cons (a, y) sb1) rb1 st1))
+               (machine y c2 (state sb2 rb2 st2)) ->
+      dist_imp (machine x c1 (state sb1 rb1 st1))
+               (machine y (RECEIVE ;; c2) (state sb2 (app (cons a nil) rb2) st2))
+  | send_x : forall (c1 c2 : com) (sb1 sb2 : sb) (rb1 rb2 : rb) (st1 st2 : st)
+                    (a : aexp) (x y : id),
+      dist_imp (machine x c1 (state sb1 rb1 st1))
+               (machine y c2 (state (cons (a, x) sb2) rb2 st2)) ->
+      dist_imp (machine x (RECEIVE ;; c1) (state sb1 (app (cons a nil) rb1) st1))
+               (machine y c2 (state sb2 rb2 st2)).
+
 End DistIMP.
 
