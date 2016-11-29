@@ -6,7 +6,7 @@ Require Import Maps.
 Require Import Imp.
 Require Import Coq.Lists.List.
 Import List Notations.
-(*Require Import Smallstep.*)
+Require Import Smallstep.
 
 Module DistIMP.
 
@@ -218,6 +218,8 @@ Inductive dist_imp : (imp * imp) -> (imp * imp) -> Prop :=
              (machine y c2 (state (cons (a, x) sb2) rb2 st2))) 
             ((machine x (RECEIVE ;; c1) (state sb1 (app (cons a nil) rb1) st1)),
             (machine y c2 (state sb2 rb2 st2))).
+
+Definition cdist_imp := multi dist_imp.
 
 End DistIMP.
 
