@@ -32,7 +32,7 @@ Inductive com : Type :=
   | CIf : bexp -> com -> com -> com
   | CWhile : bexp -> com -> com
   (* Distributed Commands*)
-  | CSend : id -> aexp -> com
+  | CSend : aexp -> id -> id -> com
   | CRecieve: com.
 
 Notation "'SKIP'" :=
@@ -45,8 +45,8 @@ Notation "'WHILE' b 'DO' c 'END'" :=
   (CWhile b c) (at level 80, right associativity).
 Notation "'IFB' b 'THEN' c1 'ELSE' c2 'FI'" :=
   (CIf b c1 c2) (at level 80, right associativity).
-Notation "'SEND' a 'TO' id" :=
-  (CSend id a) (at level  80, right associativity).
+Notation "'SEND' a 'TO' id1 'CALLED' id2" :=
+  (CSend a id1 id2) (at level  80, right associativity).
 Notation "'RECEIVE'"  :=
   (CRecieve) (at level 80, right associativity).
 
@@ -55,9 +55,15 @@ Notation "'RECEIVE'"  :=
 Definition empty_state : state :=
   t_empty 0.*)
 
-Definition sb := list (aexp * id).
+Inductive triple (A B C : Type) : Type :=
+  | trip : A -> B -> C -> triple A B C.
 
-Definition rb := list aexp.
+Notation "x '*' y '*' z" := (triple x y z) 
+  (at level 70, right associativity).
+
+Definition sb := list (aexp * id * id).
+
+Definition rb := list (aexp * id).
 
 Definition st := total_map nat.
 
@@ -179,20 +185,21 @@ Inductive cstep : (com * State) -> (com * State) -> Prop :=
       ((IFB b THEN (c1;; (WHILE b DO c1 END)) ELSE SKIP FI), state sb1 rb1 st1)
 
   | CS_Send1 : forall (sb1 : sb) (rb1 : rb)
-                      (st1 : st) (a a' : aexp) (x : id),
+                      (st1 : st) (a a' : aexp) (x z : id),
       a / state sb1 rb1 st1 ==>a a' -> 
-      cstep (SEND a TO x, state sb1 rb1 st1) (SEND a' TO x, state sb1 rb1 st1)
+      cstep (SEND a TO x CALLED z, state sb1 rb1 st1) 
+            (SEND a' TO x CALLED z, state sb1 rb1 st1)
   | CS_Send2 : forall (sb1 : sb) (rb1 : rb) (st1 : st) 
-                      (a : aexp) (x : id) (n : nat),
+                      (a : aexp) (x z : id) (n : nat),
       a = ANum n ->
-      cstep (SEND a TO x, state sb1 rb1 st1) 
-            (SKIP, state (app sb1 (cons (a, x) nil)) rb1 st1)
+      cstep (SEND a TO x CALLED z, state sb1 rb1 st1) 
+            (SKIP, state (app sb1 (cons (a, x, z) nil)) rb1 st1)
   | CS_Rec1 : forall (sb1 : sb) (st1 : st),
       cstep (RECEIVE, state sb1 nil st1) (SKIP ;; RECEIVE, state sb1 nil st1)
   | CS_Rec2 : forall (sb1 : sb) (rb1 : rb) 
-                     (st1 : st) (a : aexp) (x : id),
-      cstep (RECEIVE, state sb1 (app (cons a nil) rb1) st1) 
-            (x ::= a, state sb1 rb1 st1).
+                     (st1 : st) (a : aexp) (x z : id) (c1 : com),
+      cstep (RECEIVE ;; c1, state sb1 (app (cons (a, z) nil) rb1) st1) 
+            (x ::= a ;; c1, state sb1 rb1 st1).
 
 Inductive imp : Type :=
   | machine : id -> com -> State -> imp.
@@ -207,19 +214,34 @@ Inductive dist_imp : (imp * imp) -> (imp * imp) -> Prop :=
     dist_imp ((machine x c1 st1), (machine y c2 st2))
                ((machine x c1 st1), (machine y c2' st2'))
   | send_y : forall (c1 c2 : com) (sb1 sb2 : sb) (rb1 rb2 : rb) (st1 st2 : st)
-                    (a : aexp) (x y : id),
-    dist_imp ((machine x c1 (state (cons (a, y) sb1) rb1 st1)),
+                    (a : aexp) (x y z : id),
+    dist_imp ((machine x c1 (state (cons (a, y, z) sb1) rb1 st1)),
              (machine y c2 (state sb2 rb2 st2)))
             ((machine x c1 (state sb1 rb1 st1)),
-            ((machine y (RECEIVE ;; c2) (state sb2 (app (cons a nil) rb2) st2))))
+            ((machine y (RECEIVE ;; c2) 
+                (state sb2 (app (cons (a, z) nil) rb2) st2))))
   | send_x : forall (c1 c2 : com) (sb1 sb2 : sb) (rb1 rb2 : rb) (st1 st2 : st)
-                    (a : aexp) (x y : id),
+                    (a : aexp) (x y z : id),
     dist_imp ((machine x c1 (state sb1 rb1 st1)),
-             (machine y c2 (state (cons (a, x) sb2) rb2 st2))) 
-            ((machine x (RECEIVE ;; c1) (state sb1 (app (cons a nil) rb1) st1)),
+             (machine y c2 (state (cons (a, x, z) sb2) rb2 st2))) 
+            ((machine x (RECEIVE ;; c1) 
+                (state sb1 (app (cons (a, z) nil) rb1) st1)),
             (machine y c2 (state sb2 rb2 st2))).
 
 Definition cdist_imp := multi dist_imp.
+
+Lemma proof_of_concept : forall x y n z,
+  multi dist_imp ((machine x (SEND (ANum n) TO y CALLED z) empty_state),
+                 (machine y SKIP empty_state))
+                 ((machine x SKIP empty_state), 
+                 (machine y ((z ::= (ANum n) ;; SKIP)) empty_state)).
+Proof. 
+  intros. eapply multi_step. apply imp_step_1. 
+    eapply CS_Send2. reflexivity.
+  eapply multi_step. apply send_y. fold empty_state. 
+  eapply multi_step. apply imp_step_2. apply CS_Rec2.
+  fold empty_state. eapply multi_refl.   
+Qed.
 
 End DistIMP.
 
