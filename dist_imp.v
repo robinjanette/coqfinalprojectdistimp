@@ -187,36 +187,19 @@ Inductive cstep : (com * State) -> (com * State) -> Prop :=
       ((IFB b THEN (c1;; (WHILE b DO c1 END)) ELSE SKIP FI), state sb1 rb1 st1)
 
   | CS_Send1 : forall (sb1 : sb) (rb1 : rb)
-                      (st1 : st) (a a' : aexp) (x z : id) (c2 : com),
-      a / state sb1 rb1 st1 ==>a a' -> 
-      cstep ((SEND a TO x CALLED z) ;; c2, state sb1 rb1 st1) 
-            ((SEND a' TO x CALLED z) ;; c2, state sb1 rb1 st1)
-  | CS_Send2 : forall (sb1 : sb) (rb1 : rb) (st1 : st) 
-                      (a : aexp) (x z : id) (n : nat) (c2 : com),
-      a = ANum n ->
-      cstep ((SEND a TO x CALLED z) ;; c2, state sb1 rb1 st1) 
-            (SKIP ;; c2, state (app sb1 (cons (a, x, z) nil)) rb1 st1)
-  | CS_Send3 : forall (sb1 : sb) (rb1 : rb)
                       (st1 : st) (a a' : aexp) (x z : id),
       a / state sb1 rb1 st1 ==>a a' -> 
       cstep (SEND a TO x CALLED z, state sb1 rb1 st1) 
             (SEND a' TO x CALLED z, state sb1 rb1 st1)
-  | CS_Send4 : forall (sb1 : sb) (rb1 : rb) (st1 : st) 
+  | CS_Send2 : forall (sb1 : sb) (rb1 : rb) (st1 : st) 
                       (a : aexp) (x z : id) (n : nat),
       a = ANum n ->
       cstep (SEND a TO x CALLED z, state sb1 rb1 st1) 
             (SKIP, state (app sb1 (cons (a, x, z) nil)) rb1 st1)
-  | CS_Rec1 : forall (sb1 : sb) (st1 : st) (c2 : com),
-      cstep (RECEIVE ;; c2, state sb1 nil st1) 
-            (SKIP ;; RECEIVE ;; c2, state sb1 nil st1)
-  | CS_Rec2 : forall (sb1 : sb) (rb1 : rb) 
-                     (st1 : st) (a : aexp) (z : id) (c1 : com),
-      cstep (RECEIVE ;; c1, state sb1 (app (cons (a, z) nil) rb1) st1) 
-            (z ::= a ;; c1, state sb1 rb1 st1)
-  | CS_Rec3 : forall (sb1 : sb) (st1 : st),
+  | CS_Rec1 : forall (sb1 : sb) (st1 : st),
       cstep (RECEIVE, state sb1 nil st1) 
             (SKIP ;; RECEIVE, state sb1 nil st1)
-  | CS_Rec4 : forall (sb1 : sb) (rb1 : rb) 
+  | CS_Rec2 : forall (sb1 : sb) (rb1 : rb) 
                      (st1 : st) (a : aexp) (z : id),
       cstep (RECEIVE, state sb1 (app (cons (a, z) nil) rb1) st1) 
             (z ::= a, state sb1 rb1 st1).
@@ -255,9 +238,9 @@ Lemma proof_of_concept : forall x y n z,
                  (machine y (z ::= (ANum n)) empty_state)).
 Proof. 
   intros. eapply multi_step. apply imp_step_1. 
-    eapply CS_Send4. reflexivity.
+    eapply CS_Send2. reflexivity.
   eapply multi_step. apply send_y. fold empty_state. 
-  eapply multi_step. apply imp_step_2. apply CS_Rec4. fold empty_state. 
+  eapply multi_step. apply imp_step_2. apply CS_Rec2. fold empty_state. 
   eapply multi_refl.   
 Qed.
 
@@ -271,23 +254,25 @@ Lemma proof_of_concept' : forall x y z,
                   (machine y SKIP (state nil nil (t_update (t_empty 0) z 3)))).
 Proof.
   intros. 
-  eapply multi_step. apply imp_step_2. apply CS_Rec1. 
-  eapply multi_step. apply imp_step_1. apply CS_Send1. apply AS_Plus1.
+  eapply multi_step. apply imp_step_2. apply CS_SeqStep. apply CS_Rec1. 
+  eapply multi_step. apply imp_step_1. apply CS_SeqStep. apply CS_Send1. 
+    apply AS_Plus1. apply AS_Plus.
+  eapply multi_step. apply imp_step_1. apply CS_SeqStep. apply CS_Send1. 
     apply AS_Plus.
-  eapply multi_step. apply imp_step_1. apply CS_Send1. apply AS_Plus.
-  eapply multi_step. apply imp_step_1. eapply CS_Send2. reflexivity.
-  eapply multi_step. apply imp_step_2. apply CS_SeqSkip.
+  eapply multi_step. apply imp_step_1. apply CS_SeqStep. eapply CS_Send2. 
+    reflexivity.
+  eapply multi_step. apply imp_step_2. apply CS_SeqStep. apply CS_SeqSkip.
   eapply multi_step. apply send_y. 
-  eapply multi_step. apply imp_step_2. apply CS_Rec2.
+  eapply multi_step. apply imp_step_2. apply CS_SeqStep. apply CS_Rec2.
   eapply multi_step. apply imp_step_2. apply CS_SeqStep. apply CS_Ass.
   eapply multi_step. apply imp_step_2. apply CS_SeqSkip.
   eapply multi_step. apply imp_step_1. apply CS_SeqSkip.
-  eapply multi_step. apply imp_step_2. apply CS_Send3. apply AS_Plus1.
+  eapply multi_step. apply imp_step_2. apply CS_Send1. apply AS_Plus1.
     apply AS_Plus.
-  eapply multi_step. apply imp_step_2. apply CS_Send3. apply AS_Plus.
-  eapply multi_step. apply imp_step_2. eapply CS_Send4. reflexivity.
+  eapply multi_step. apply imp_step_2. apply CS_Send1. apply AS_Plus.
+  eapply multi_step. apply imp_step_2. eapply CS_Send2. reflexivity.
   eapply multi_step. apply send_x.
-  eapply multi_step. apply imp_step_1. apply CS_Rec4.
+  eapply multi_step. apply imp_step_1. apply CS_Rec2.
   eapply multi_step. apply imp_step_1. apply CS_Ass.
   eapply multi_refl.
 Qed.
