@@ -1,0 +1,9 @@
+\begin{thebibliography}{1}
+
+\bibitem{gennaro2010non}
+Rosario Gennaro, Craig Gentry, and Bryan Parno.
+\newblock Non-interactive verifiable computing: Outsourcing computation to
+  untrusted workers.
+\newblock In {\em CRYPTO}, pages 465--482. Springer-Verlag, 2010.
+
+\end{thebibliography}
