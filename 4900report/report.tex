@@ -31,10 +31,10 @@
 \maketitle
 
 \section{Introduction}
-We were first introduced to Imp from our textbook Software Foundations by Pierce et al. Imp is a small imperative programming language. It contains a small core portion of major imperative programming languages like C and Java(Cite Textbook). The textbook introduces Imp to demonstrate how to model a programming language in Coq. Then it could introduce different ways to reason about programs in Coq. These included program equivalence and Hoare Logic. In one chapter they introduce a extension to Imp called concurrent Imp. This is an extension that models an Imp program running commands in parallel.
+Our first introduction to Imp came from our textbook \textit{Software Foundations} by Pierce et al. Imp is a small imperative programming language. It contains a small core portion of major imperative programming languages like C and Java("Imp"). The textbook introduces Imp to demonstrate how to model a programming language in Coq, and the following chapters outline different ways to reason about programs in Coq. These methods included program equivalence and Hoare Logic. In a chapter called Smallstep, which covered small-step operational semantics for programming languages, the authors introduce a extension to Imp called Concurrent Imp. This extension models an Imp program running commands in parallel. We were able to use our experience with Imp, along with the methodology of Concurrent Imp, to create our Distributed Imp.
 
 \subsection{Concurrent Imp} 
-In concurrent Imp the textbook adds an extension to Imp to model two command running in parallel. This is a simple task because they only need to add a new command to the inductive type \lstinline|com|, notation for the command and lastly they add three new step rules to the inductive type \lstinline|cstep|.  
+In Concurrent Imp, the textbook adds an extension to Imp to model two commands running in parallel. This is a simple task because the authors only needed to add a new command, CPar, to the inductive type \lstinline|com|, notation for Par, and lastly three new step rules to the inductive type \lstinline|cstep|.  
 
 \begin{lstlisting}
 Inductive com : Type :=
@@ -50,29 +50,28 @@ Inductive com : Type :=
 \begin{lstlisting}
 Inductive cstep : (com * state) -> (com * state) -> Prop :=
 (*New Part*)
- | CS_Par1 : ∀st c1 c1' c2 st',
+ | CS_Par1 : forall st c1 c1' c2 st',
       c1 / st => c1' / st' ->
       (PAR c1 WITH c2 END) / st => (PAR c1' WITH c2 END) / st'
-  | CS_Par2 : ∀st c1 c2 c2' st',
+  | CS_Par2 : forall st c1 c2 c2' st',
       c2 / st => c2' / st' ->
       (PAR c1 WITH c2 END) / st => (PAR c1 WITH c2' END) / st'
-  | CS_ParDone : ∀st,
-      (PAR SKIP WITH SKIP END) / st => SKIP / st
+  | CS_ParDone : forall st, (PAR SKIP WITH SKIP END) / st => SKIP / st
 \end{lstlisting}
 
-The first two steps give the choice of either c1 command stepping or c2 command stepping. Unlike previous commands that were made to be deterministic these two commands are non-deterministic. This is how the parallel computation is modeled. Both c1 and c2 can step and one does not have to be a value before the other one can step. And, then to allow the program to stop, the last rule is added, for when both c1 and c2 are skip, then the whole command steps to skip. 
+The first two rules allow either the c1 or c2 command to step to its next state. Unlike previous commands that were forced through inference rules to be deterministic, these two commands are non-deterministic. This is how the parallel computation is modelled. Both c1 and c2 can step and one does not have to be a value before the other one can step. And, then to allow the program to stop, the last rule is added, for when both c1 and c2 are SKIP, then the whole command steps to SKIP. 
 
 \subsection{Distributed IMP} 
-The extension concurrent Imp gave us the idea to make our own extension to Imp. We decided on extending the model of Imp to include distributed computing. Imp was modeled as one program running commands. We wanted to extend it so it had some representation of different machines running those commands and the ability to send and receive data between those different machines. We updated the state with buffers to hold the data sent and received. We modeled machines as inductive data types and defined step relations for these different machines. The rules were non-deterministic to model the parallel nature of distributed computing. The programs can themselves step or send data to another machine. We then tested basic programs to determine if they worked correctly.
+The extensions in Concurrent Imp gave us the idea to make our own extension to the Imp model. We decided to make new rules to support distributed computing. Imp was modelled as one program running commands, so we wanted to extend it so it can have some representation of different machines running those commands and the ability to send and receive data between those different machines. We updated the state with buffers to hold the data sent and received. We modelled machines as inductive data types and defined step relations for these different machines. The rules were non-deterministic to model the parallel nature of distributed computing. The programs can themselves step or send data to another machine. We then tested basic programs to determine if they worked correctly.
 
 \subsection{Rationale}
-While distributed computing is not new, it is important and relevant for many application today. In fact, distributed computing comes from the 1960s operating system architectures. That is an operating system with concurrent processes communicated by message passing(Cite this). While automatic theorem provers like Coq are relatively new and exciting area of computer science, it is unlikely that much has been done yet to model distributed systems with them. Distributed systems are widely used and therefore it would be useful to model them and be able to prove things about them. 
+While distributed computing is not new, it is important and relevant for many applications today. In fact, distributed computing comes from the 1960s operating system architectures, an operating system with concurrent processes communicated by message passing(Cite this). While automatic theorem provers like Coq are relatively new and an exciting area of computer science, it is unlikely many people have modelled distributed systems with them. Distributed systems are widely used, and therefore it would be useful to model them and be able to prove things about them. 
 
 \section{Technical Development}
-Since we already had a model in Coq for Imp that is of one program running, the first step was to give that model some ability to send and receive data. The end goal was to define an overall inductive relation that would non-deterministically choose a machine and make one step of the program or send information between the machines. To get to that point, we needed to update the state by giving it a send and receive buffer. That way when a send command is called in the Imp program it could update its send buffer and when a receive command is called it could get the data from its receive buffer. The overall inductive definition could then take from the one machine's send buffer and put the data in another machines receive buffer.
+Since we already had a model in Coq for Imp for the execution of one program, the first step was to give that model some ability to send and receive data. The end goal was to define an overall inductive relation that would non-deterministically choose a machine and make one step of the program or send information between the machines. To get to that point, we needed to update the state by giving it a send and receive buffer. That way, when a send command is called in the Imp program, it could update its send buffer, and when a receive command is called, it could get the data from its receive buffer. The overall inductive definition could then take from the one machine's send buffer and put the data in another machines receive buffer.
 
 \subsection{Distributed on a Single Imp Program}
-To update the state, we first defined a triple type to make the definition of the send buffer easier. Then the send buffer is a triple with the \lstinline|(aexp * id * id)| where the \lstinline|aexp| is the data and one \lstinline|id| is the machine \lstinline|id| and the other is the variable \lstinline|id|. The receive buffer is just the data and variable \lstinline|id| and \lstinline|st| is the regular state of an Imp program. We then put all these together in a inductive type called \lstinline|State|. Lastly, we defined the empty state with the added \lstinline|nil| and \lstinline|nil| for the send and receive buffer respectively. 
+To update the state, we first defined a triple type to make the definition of the send buffer easier. The send buffer is a triple with the \lstinline|(aexp * id * id)| where the \lstinline|aexp| is the data, the first \lstinline|id| is the machine \lstinline|id|, and the other is the variable \lstinline|id|. The receive buffer is simpler, just the \lstinline|aexp| data and variable \lstinline|id|. The final part of the state, \lstinline|st|, is the original implementation of state for an Imp program, which is a total map of natural numbers. We then packaged these three together in a inductive type called \lstinline|State|. Lastly, we defined a new empty state for our implementation, with the added \lstinline|nil| and \lstinline|nil| for the send and receive buffer respectively. 
 
 \begin{lstlisting}
 Inductive triple (A B C : Type) : Type :=
@@ -93,7 +92,7 @@ Inductive State : Type :=
 Definition empty_state : State := state nil nil (t_empty 0).
 \end{lstlisting}
 
-We updated the inductive \lstinline|com| definition with the two new commands send and receive. The send command taking an \lstinline|aexp| and an \lstinline|id| to identify the machine and a variable \lstinline|id|. The receive command does not take any arguments since it just modifies the receive buffer. Then we gave them notation like the other Imp commands.
+Next, we updated the inductive \lstinline|com| definition with two new commands: send and receive. The send command takes as arguments an \lstinline|aexp|, an \lstinline|id| to identify the machine, and a variable \lstinline|id|. The receive command does not take any arguments since it just modifies the receive buffer. We gave them notation like the other Imp commands.
 
 \begin{lstlisting}
 Inductive com : Type :=
@@ -107,36 +106,37 @@ Inductive com : Type :=
   (CRecieve) (at level 80, right associativity).
 \end{lstlisting}
 
-We then added four new constructors to the \lstinline|cstep| inductive definition. We defined a send constructor for which the \lstinline|aexp| could step and then another for when that \lstinline|aexp| was a number and then it could add it to the send buffer. We defined two receive constructors. The first was for the case when there is nothing in the receive buffer. Then the program should step to a \lstinline|SKIP| command sequenced with another receive command. The second receive constructor would take the first element in the receive buffer and update the state with the new binding of variable and number. 
+We then added four new constructors to the \lstinline|cstep| inductive definition. We defined a send constructor for which the \lstinline|aexp| is not a value and could therefore step, and another for when the \lstinline|aexp| is a value and it is added to the send buffer. We defined two receive constructors. The first receive was for the case when the receive buffer is empty; the program steps to a \lstinline|SKIP| command sequenced with another receive command. The second receive constructor takes the first element in the receive buffer and updates the state with the new binding of variable and number. 
 
 \begin{lstlisting}
 Inductive cstep : (com * State) -> (com * State) -> Prop :=
 (* Distribued Steps *)
- | CS_Send1 : forall (sb1 : sb) (rb1 : rb)
-                      (st1 : st) (a a' : aexp) (x z : id),
+ | CS_Send1 : forall (sb1 : sb) (rb1 : rb) (st1 : st) (a a' : aexp) (x z : id),
       a / state sb1 rb1 st1 => a a' -> 
       cstep (SEND a TO x CALLED z, state sb1 rb1 st1) 
             (SEND a' TO x CALLED z, state sb1 rb1 st1)
-  | CS_Send2 : forall (sb1 : sb) (rb1 : rb) (st1 : st) 
-                      (a : aexp) (x z : id) (n : nat),
+  | CS_Send2 : forall (sb1 : sb) (rb1 : rb) (st1 : st) (a : aexp) (x z : id) (n : nat),
       a = ANum n ->
       cstep (SEND a TO x CALLED z, state sb1 rb1 st1) 
             (SKIP, state (app sb1 (cons (a, x, z) nil)) rb1 st1)
   | CS_Rec1 : forall (sb1 : sb) (st1 : st),
       cstep (RECEIVE, state sb1 nil st1) 
             (SKIP ;; RECEIVE, state sb1 nil st1)
-  | CS_Rec2 : forall (sb1 : sb) (rb1 : rb) 
-                     (st1 : st) (a : aexp) (z : id),
+  | CS_Rec2 : forall (sb1 : sb) (rb1 : rb) (st1 : st) (a : aexp) (z : id),
       cstep (RECEIVE, state sb1 (app (cons (a, z) nil) rb1) st1) 
             (z ::= a, state sb1 rb1 st1).
 \end{lstlisting}
 
 \subsection{Modeling Multiple Imp Programs}
 
+At this point, our implementation differs from that of Concurrent Imp in several ways. Because the parallel commands are occurring on one machine, the two parallel commands share the same state. When one command changes the state, the other command will be affected by that change. In contrast, our distributed system required something quite different. Each machine in our distributed system requires three things: an \lstinline|id| which functions as its name, a set of Imp commands, and a \lstinline|State|. We used an inductive type called \lstinline|imp| to package those three types together.
+
 \begin{lstlisting}
 Inductive imp : Type :=
   | machine : id -> com -> State -> imp.
 \end{lstlisting}
+
+Furthermore, we needed to define an inductive step relation over \lstinline|imp|, as the \lstinline|cstep| relation could only step Imp commands, not the entire distributed system. We limited our distributed system to two machines for simplicity. Our \lstinline|dist_imp| relation has four rules, two for when each machine can execute a command and take a step, and two for when one machine sends data to the other. The first two rules state that the \lstinline|dist_imp| relation will take a step when one machine can take a step. These rules make our implementation non-deterministic, because our relation does not force one machine to step as far as it can before the other machine can step. The last two rules change the states of both machines, removing the data and id from one machine's send buffer and updating the receive buffer of the other machine.  
 
 \begin{lstlisting}
 Inductive dist_imp : (imp * imp) -> (imp * imp) -> Prop :=
@@ -162,6 +162,8 @@ Inductive dist_imp : (imp * imp) -> (imp * imp) -> Prop :=
             (machine y c2 (state sb2 rb2 st2))).
 \end{lstlisting}
 
+Finally, we needed a way to test whether our implementation correctly models distributed commands. We defined a multi-step relation on \lstinline|dist_imp|, and then used that multistep to prove that a set of commands in initial states, in our case the empty state, step to the correct commands in the final states.
+
 \begin{lstlisting}
 Definition cdist_imp := multi dist_imp.
 \end{lstlisting}
@@ -173,16 +175,21 @@ Lemma proof_of_concept : forall x y n z,
                  ((machine x SKIP empty_state), 
                  (machine y (z ::= (ANum n)) empty_state)).
 Proof. 
-  intros. eapply multi_step. apply imp_step_1. 
-    eapply CS_Send2. reflexivity.
+  intros. eapply multi_step. apply imp_step_1. eapply CS_Send2. reflexivity.
+    (*Uses the cstep relation to update
+           machine x's send buffer with data and id's*)
   eapply multi_step. apply send_y. fold empty_state. 
+    (*Uses the send_y rule to move the data from
+            machine x's send buffer to the receive buffer of machine y*)
   eapply multi_step. apply imp_step_2. apply CS_Rec2. fold empty_state. 
-  eapply multi_refl.   
+    (*Uses the cstep relation to remove the data from 
+            machine y's receive buffer and assign it to an id*)
+  eapply multi_refl. 
 Qed.
 \end{lstlisting}
 
 \section{Conclusion}
-We modeled distributed computing for the Imp language and demonstrated that some basic examples worked correctly. While this is a good start, it is still fairly limited in scope. For one thing, are model only has two machines while most distributed systems have many different machines. Another problem with our model is that it only allows a program to send a number to the other machine. It does not allow it to send any other data type like bool. On top of that, it sends data with a predefined variable name. This could be problematic if the other Imp machine already has a definition for that variable. 
+We modelled distributed computing for the Imp language and demonstrated that some basic examples worked correctly. While this is a good start, it is still fairly limited in scope. For one thing, are model only has two machines while most distributed systems have many different machines. Another problem with our model is that it only allows a program to send a number to the other machine. It does not allow it to send any other data type like bool. On top of that, it sends data with a predefined variable name. This could be problematic if the other Imp machine already has a definition for that variable. 
 
 Going forward the next step would be to model a system with more than two computers. This would be more like a real world distributed computing and less restricting. We could also add the ability for the programs to be able to send different types of data other than just numbers like it does now. And, the variable with the data type that is sent could be removed. It was originally added because the model will not work without it. It needs to be modified in such a way that we can remove this restriction. 
 
