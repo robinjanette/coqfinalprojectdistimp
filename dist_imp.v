@@ -164,8 +164,6 @@ Inductive cstep : (com * State) -> (com * State) -> Prop :=
   | CS_Ass : forall (sb1 : sb) (rb1 : rb) (st1 : st) (i : id) (n : nat),
       cstep (i ::= (ANum n), state sb1 rb1 st1) 
       (SKIP, state sb1 rb1 (t_update st1 i n))
-  | CS_SeqSkip : forall (c2 : com) (st : State),
-      cstep (SKIP ;; c2, st) (c2, st)
   | CS_SeqStep : forall (st: State) (c1 c1': com) (st' : State) (c2 : com),
       cstep (c1, st) (c1', st') ->
       cstep (c1 ;; c2, st) (c1' ;; c2, st')
@@ -261,12 +259,12 @@ Proof.
     apply AS_Plus.
   eapply multi_step. apply imp_step_1. apply CS_SeqStep. eapply CS_Send2. 
     reflexivity.
-  eapply multi_step. apply imp_step_2. apply CS_SeqStep. apply CS_SeqSkip.
+  eapply multi_step. apply imp_step_2. apply CS_SeqStep. apply CS_SeqFinish.
   eapply multi_step. apply send_y. 
   eapply multi_step. apply imp_step_2. apply CS_SeqStep. apply CS_Rec2.
   eapply multi_step. apply imp_step_2. apply CS_SeqStep. apply CS_Ass.
-  eapply multi_step. apply imp_step_2. apply CS_SeqSkip.
-  eapply multi_step. apply imp_step_1. apply CS_SeqSkip.
+  eapply multi_step. apply imp_step_2. apply CS_SeqFinish.
+  eapply multi_step. apply imp_step_1. apply CS_SeqFinish.
   eapply multi_step. apply imp_step_2. apply CS_Send1. apply AS_Plus1.
     apply AS_Plus.
   eapply multi_step. apply imp_step_2. apply CS_Send1. apply AS_Plus.
