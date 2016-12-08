@@ -1,9 +1,14 @@
 \begin{thebibliography}{1}
 
-\bibitem{gennaro2010non}
-Rosario Gennaro, Craig Gentry, and Bryan Parno.
-\newblock Non-interactive verifiable computing: Outsourcing computation to
-  untrusted workers.
-\newblock In {\em CRYPTO}, pages 465--482. Springer-Verlag, 2010.
+\bibitem{foundations}
+Gregory Andrews.
+\newblock {\em Foundations of Multithreaded, Parallel, and Distributed
+  Programming}.
+\newblock Addison-Wesley, 2000.
+
+\bibitem{pierce2016imp}
+Benjamin Pierce, C, Arthur Azevedo~de Amorim, Chris Casinghino, and et~al.
+\newblock {\em Software Foundations}.
+\newblock 2016.
 
 \end{thebibliography}

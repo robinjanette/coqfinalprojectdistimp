@@ -23,7 +23,7 @@
 
 \begin{document}
 
-\title{Distributed IMP}
+\title{Distributed Imp}
 
 \author{Robin Kelby \and Alex Snyder}
 \institute{Ohio University, Athens, OH 45701}
@@ -31,7 +31,7 @@
 \maketitle
 
 \section{Introduction}
-Our first introduction to Imp came from our textbook \textit{Software Foundations} by Pierce et al. Imp is a small imperative programming language. It contains a small core portion of major imperative programming languages like C and Java("Imp"). The textbook introduces Imp to demonstrate how to model a programming language in Coq, and the following chapters outline different ways to reason about programs in Coq. These methods included program equivalence and Hoare Logic. In a chapter called Smallstep, which covered small-step operational semantics for programming languages, the authors introduce a extension to Imp called Concurrent Imp. This extension models an Imp program running commands in parallel. We were able to use our experience with Imp, along with the methodology of Concurrent Imp, to create our Distributed Imp.
+Our first introduction to Imp came from our textbook \textit{Software Foundations} by Pierce et al. Imp is a small imperative programming language. It contains a small core portion of major imperative programming languages like C and Java~\cite{pierce2016imp}. The textbook introduces Imp to demonstrate how to model a programming language in Coq, and the following chapters outline different ways to reason about programs in Coq. These methods included program equivalence and Hoare Logic. In a chapter called Smallstep, which covered small-step operational semantics for programming languages, the authors introduce a extension to Imp called Concurrent Imp. This extension models an Imp program running commands in parallel. We were able to use our experience with Imp, along with the methodology of Concurrent Imp, to create our Distributed Imp.
 
 \subsection{Concurrent Imp} 
 In Concurrent Imp, the textbook adds an extension to Imp to model two commands running in parallel. This is a simple task because the authors only needed to add a new command, CPar, to the inductive type \lstinline|com|, notation for Par, and lastly three new step rules to the inductive type \lstinline|cstep|.  
@@ -65,7 +65,7 @@ The first two rules allow either the c1 or c2 command to step to its next state.
 The extensions in Concurrent Imp gave us the idea to make our own extension to the Imp model. We decided to make new rules to support distributed computing. Imp was modelled as one program running commands, so we wanted to extend it so it can have some representation of different machines running those commands and the ability to send and receive data between those different machines. We updated the state with buffers to hold the data sent and received. We modelled machines as inductive data types and defined step relations for these different machines. The rules were non-deterministic to model the parallel nature of distributed computing. The programs can themselves step or send data to another machine. We then tested basic programs to determine if they worked correctly.
 
 \subsection{Rationale}
-While distributed computing is not new, it is important and relevant for many applications today. In fact, distributed computing comes from the 1960s operating system architectures, an operating system with concurrent processes communicated by message passing(Cite this). While automatic theorem provers like Coq are relatively new and an exciting area of computer science, it is unlikely many people have modelled distributed systems with them. Distributed systems are widely used, and therefore it would be useful to model them and be able to prove things about them. 
+While distributed computing is not new, it is important and relevant for many applications today. In fact, distributed computing comes from the 1960s operating system architectures, an operating system with concurrent processes communicated by message passing~\cite{foundations}. While automatic theorem provers like Coq are relatively new and an exciting area of computer science, it is unlikely many people have modelled distributed systems with them. Distributed systems are widely used, and therefore it would be useful to model them and be able to prove things about them. 
 
 \section{Technical Development}
 Since we already had a model in Coq for Imp for the execution of one program, the first step was to give that model some ability to send and receive data. The end goal was to define an overall inductive relation that would non-deterministically choose a machine and make one step of the program or send information between the machines. To get to that point, we needed to update the state by giving it a send and receive buffer. That way, when a send command is called in the Imp program, it could update its send buffer, and when a receive command is called, it could get the data from its receive buffer. The overall inductive definition could then take from the one machine's send buffer and put the data in another machines receive buffer.
@@ -194,9 +194,6 @@ We modelled distributed computing for the Imp language and demonstrated that som
 Going forward the next step would be to model a system with more than two computers. This would be more like a real world distributed computing and less restricting. We could also add the ability for the programs to be able to send different types of data other than just numbers like it does now. And, the variable with the data type that is sent could be removed. It was originally added because the model will not work without it. It needs to be modified in such a way that we can remove this restriction. 
 
 When the model is improved then there are many steps forward for this project. We can define larger distributed examples and see how they work within or model. We could define problems that are unique to distributed computing and how to determine if they exist within a program. We could define and prove things that are unique to distributed computing in general. And, finally the end goal would be to model real world distributed programs and prove things about them. 
-
-\section{Reference Stuff}
-This is a citation.~\cite{gennaro2010non}
 
 \bibliographystyle{plain}
 \bibliography{references}
